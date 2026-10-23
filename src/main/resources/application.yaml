@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: calculator
+server:
+  port: 8081
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
