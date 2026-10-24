@@ -1,0 +1,44 @@
+# Build output (the image builds its own)
+target/
+build/
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor folders/files
+.idea/
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.sts4-cache/
+*.iml
+*.iws
+*.ipr
+nbproject/
+
+# Maven wrapper (the build image provides Maven)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Docs
+*.md
+
+# Secrets and local environment
+.env
+.env.*
+*.pem
+*.key
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+
+# OS and log files
+.DS_Store
+Thumbs.db
+*.log
