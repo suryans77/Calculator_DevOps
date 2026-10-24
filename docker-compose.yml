@@ -1,0 +1,47 @@
+# Fixed project name so re-runs reuse the same stack
+name: calculator
+
+services:
+  app:
+    build: .
+    image: ${DOCKERHUB_USER:-suryans77}/calculator:${IMAGE_TAG:-latest}
+    # Two instances behind nginx; no host ports, so they're only reachable via nginx
+    deploy:
+      replicas: 2
+    environment:
+      SERVER_PORT: "8081"
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
+    # Busybox wget ships with the Alpine runtime image
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - calc-net
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    # Start only once the app replicas report healthy
+    depends_on:
+      app:
+        condition: service_healthy
+    # Checks nginx itself; 127.0.0.1 because "localhost" resolves to ::1 and nginx listens on IPv4 only
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - calc-net
+
+networks:
+  calc-net:
+    driver: bridge
