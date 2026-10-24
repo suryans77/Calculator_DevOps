@@ -112,3 +112,5 @@ src/
 ## CI/CD Pipeline
 
 Coming soon: Docker, Docker Compose, Jenkins.
+
+checking for build automation
