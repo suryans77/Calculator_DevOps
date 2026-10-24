@@ -91,26 +91,68 @@ curl "http://localhost:8081/api/v1/multiply?a=1e308&b=10"
 {"timestamp":"2026-10-23T15:23:31.800834600Z","status":400,"error":"Bad Request","message":"Result of multiply is too large to represent as a finite number","path":"/api/v1/multiply"}
 ```
 
+## Running with Docker
+
+The multi-stage [Dockerfile](Dockerfile) builds the JAR with Maven. It then runs the JAR on a slim Java 21 runtime image as a non-root user.
+
+```bash
+docker build -t calculator .
+docker run -d --name calculator -p 8081:8081 calculator
+curl "http://localhost:8081/api/v1/add?a=2&b=3"
+```
+
+## Running with Docker Compose
+
+[docker-compose.yml](docker-compose.yml) runs **2 replicas** of the app behind an **nginx** reverse proxy on **port 80**. nginx shares requests between the replicas. The replicas publish no ports of their own, so all traffic goes through nginx.
+
+```bash
+docker compose up -d        # build (if needed) and start the stack
+docker compose ps           # all containers should show (healthy)
+curl "http://localhost/api/v1/add?a=2&b=3"
+docker compose down         # stop and remove the stack
+```
+
+- **Health checks:** each app replica checks `/actuator/health`. nginx starts only after the replicas are healthy, and it has its own health check.
+- **Image:** `${DOCKERHUB_USER:-suryans77}/calculator:${IMAGE_TAG:-latest}`. Set these variables to run a specific build.
+
+## CI/CD Pipeline (Jenkins)
+
+The declarative [Jenkinsfile](Jenkinsfile) runs on every push to GitHub:
+
+| Stage        | What it does |
+|--------------|--------------|
+| Checkout     | Checks out the pushed commit |
+| Build        | `mvn -B clean package -DskipTests` |
+| Test         | `mvn -B test`; publishes JUnit reports |
+| Docker Build | Builds `suryans77/calculator`, tagged with the build number and `latest` |
+| Push         | Pushes both tags to [Docker Hub](https://hub.docker.com/r/suryans77/calculator) |
+| Deploy       | `docker compose up -d` with the new tag; waits up to 120s for every container to be healthy, then checks `/actuator/health` through nginx |
+
+- **Trigger:** a GitHub webhook reaches the local Jenkins through an ngrok tunnel (`ngrok http 8080`). The webhook URL is `https://<ngrok-host>/github-webhook/`, and the job has *GitHub hook trigger for GITScm polling* enabled.
+- **Credentials:** Docker Hub credentials are stored in Jenkins as a username/password credential with the ID `dockerhub-creds`, using an access token as the password. Nothing is hard-coded in the repo.
+- **Notifications:** an email with the job name, build number, status and build URL is sent on every success or failure. This uses the Email Extension plugin.
+
 ## Project structure
 
 ```
-src/
-├── main/
-│   ├── java/com/suryans/calculator/
-│   │   ├── CalculatorApplication.java       # Spring Boot entry point
-│   │   ├── controller/CalculatorController.java  # REST endpoints
-│   │   ├── service/CalculatorService.java   # Arithmetic and validation
-│   │   ├── dto/                             # CalculationResponse, ErrorResponse
-│   │   └── exception/                       # Custom exceptions and GlobalExceptionHandler
-│   └── resources/application.yaml           # Port 8081, actuator config
-└── test/java/com/suryans/calculator/
-    ├── CalculatorApplicationTests.java      # Context load test
-    ├── controller/CalculatorControllerTest.java  # MockMvc (@WebMvcTest) tests
-    └── service/CalculatorServiceTest.java   # JUnit 5 unit tests
+.
+├── Dockerfile                                   # Multi-stage image build
+├── docker-compose.yml                           # 2 app replicas + nginx
+├── nginx/nginx.conf                             # Reverse proxy / load balancer
+├── Jenkinsfile                                  # CI/CD pipeline
+└── src/
+    ├── main/
+    │   ├── java/com/suryans/calculator/
+    │   │   ├── CalculatorApplication.java       # Spring Boot entry point
+    │   │   ├── controller/CalculatorController.java  # REST endpoints
+    │   │   ├── service/CalculatorService.java   # Arithmetic and validation
+    │   │   ├── dto/                             # CalculationResponse, ErrorResponse
+    │   │   └── exception/                       # Custom exceptions and GlobalExceptionHandler
+    │   └── resources/application.yaml           # Port 8081, actuator config
+    └── test/java/com/suryans/calculator/
+        ├── CalculatorApplicationTests.java      # Context load test
+        ├── controller/CalculatorControllerTest.java  # MockMvc (@WebMvcTest) tests
+        └── service/CalculatorServiceTest.java   # JUnit 5 unit tests
 ```
-
-## CI/CD Pipeline
-
-Coming soon: Docker, Docker Compose, Jenkins.
 
 checking for build automation

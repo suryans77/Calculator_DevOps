@@ -16,7 +16,7 @@ class CalculatorServiceTest {
 
 	@Test
 	void addReturnsSum() {
-		assertThat(calculatorService.add(2, 3)).isEqualTo(5.0);
+		assertThat(calculatorService.add(2, 3)).isEqualTo(5.5);
 	}
 
 	@Test
