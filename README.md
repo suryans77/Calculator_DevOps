@@ -154,5 +154,3 @@ The declarative [Jenkinsfile](Jenkinsfile) runs on every push to GitHub:
         ├── controller/CalculatorControllerTest.java  # MockMvc (@WebMvcTest) tests
         └── service/CalculatorServiceTest.java   # JUnit 5 unit tests
 ```
-
-checking for build automation
